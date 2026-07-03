@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StreamVault Pro - Premium Music Player</title>
+    <!-- Google Fonts & FontAwesome para Ícones -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-base: #000000;
+            --bg-surface: #121216;
+            --bg-card: #1c1c24;
+            --accent: #ff2d55; /* Apple Music Red/Pink */
+            --accent-glow: rgba(255, 45, 85, 0.4);
+            --text-main: #ffffff;
+            --text-muted: #8e8e93;
+            --border-color: rgba(255, 255, 255, 0.06);
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --glow-strength: 30px;
+        }
+
+        /* Temas Alternativos (Spotify, Cyberpunk, Stealth) */
+        body.theme-spotify {
+            --accent: #1db954;
+            --accent-glow: rgba(29, 185, 84, 0.4);
+        }
+        body.theme-cyberpunk {
+            --bg-base: #0b001a;
+            --bg-surface: #120129;
+            --bg-card: #1f0340;
+            --accent: #00f0ff;
+            --accent-glow: rgba(0, 240, 255, 0.4);
+        }
+        body.theme-stealth {
+            --bg-base: #0a0a0a;
+            --bg-surface: #141414;
+            --bg-card: #1f1f1f;
+            --accent: #ffffff;
+            --accent-glow: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        /* Ambient Glow Engine */
+        .ambient-glow {
+            position: fixed;
+            top: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%);
+            filter: blur(80px);
+            z-index: 0;
+            pointer-events: none;
+            transition: background 0.5s ease;
+        }
+
+        /* Layout Estrutural */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            z-index: 10;
+        }
+
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: auto;
+            position: relative;
+            z-index: 5;
+            padding-bottom: 120px; /* Espaço para o player fixo */
+        }
+
+        /* Logótipo & Branding */
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(45deg, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Menu de Navegação */
+        .nav-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 14px 18px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: var(--text-main);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item.active {
+            border-left: 4px solid var(--accent);
+            background-color: rgba(255, 45, 85, 0.08);
+            color: var(--text-main);
+        }
+
+        body.theme-spotify .nav-item.active { background-color: rgba(29, 185, 84, 0.08); }
+        body.theme-cyberpunk .nav-item.active { background-color: rgba(0, 240, 255, 0.08); }
+        body.theme-stealth .nav-item.active { background-color: rgba(255, 255, 255, 0.08); }
+
+        /* Conteúdo Principal */
+        .content-container {
+            padding: 40px;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Saudação e Header */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+        }
+
+        .greeting h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .greeting p {
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-size: 0.95rem;
+        }
+
+        /* Mini Dashboard de Estatísticas */
+        .stats-banner {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--bg-surface), rgba(255,255,255,0.02));
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-size: 1.2rem;
+        }
+
+        .stat-info h4 {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .stat-info p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Barra de Adicionar Track Premium */
+        .search-vault-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 8px 8px 8px 20px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: border-color 0.3s ease;
+        }
+
+        .search-vault-box:focus-within {
+            border-color: var(--accent);
+        }
+
+        .search-vault-box i {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .search-vault-box input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .search-vault-box button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .search-vault-box button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 var(--glow-strength) var(--accent-glow);
+        }
+
+        /* Grid de Músicas Pro */
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tracks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .track-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .track-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .track-cover-wrapper {
+            position: relative;
+            width: 100%;
+            height: 160px;
+            background: linear-gradient(135deg, #232526, #414345);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .track-cover-wrapper i {
+            font-size: 3rem;
+            color: rgba(255,255,255,0.15);
+        }
+
+        .play-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .track-card:hover .play-overlay {
+            opacity: 1;
+        }
+
+        .play-btn-circle {
+            width: 50px;
+            height: 50px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .track-card:hover .play-btn-circle {
+            transform: scale(1);
+        }
+
+        .track-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .track-info-text h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 190px;
+        }
+
+        .track-info-text p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .fav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: color 0.2s;
+        }
+
+        .fav-btn.active {
+            color: var(--accent);
+        }
+
+        .track-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: var(--radius-md);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-listen {
+            background: rgba(255, 255, 255, 0.06);
+            color: white;
+        }
+
+        .btn-listen:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .btn-trash {
+            background: transparent;
+            color: rgba(255, 59, 48, 0.7);
+            max-width: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 59, 48, 0.2);
+        }
+
+        .btn-trash:hover {
+            background: rgba(255, 59, 48, 0.1);
+            color: rgba(255, 59, 48, 1);
+        }
+
+        /* Painel De Definições Pro (Estilo Modal Embutido) */
+        .settings-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        .setting-info h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .setting-info p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .theme-selector-grid {
+            display: flex;
+            gap: 12px;
+        }
+
+        .theme-pill {
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.04);
+            transition: all 0.2s;
+        }
+
+        .theme-pill.active {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-backup {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-backup:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Player Imersivo Fixo (Estilo Apple Music / Spotify Desktop) */
+        .master-player-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: rgba(18, 18, 22, 0.85);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-top: 1px solid var(--border-color);
+            z-index: 100;
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .current-track-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .mini-cover {
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(135deg, #3a3d40, #181717);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+
+        .mini-cover-anim {
+            animation: pulseGlow 2s infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 5px var(--accent-glow); }
+            100% { box-shadow: 0 0 20px var(--accent); }
+        }
+
+        .master-controls-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .iframe-stage {
+            width: 100%;
+            height: 60px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        .iframe-stage iframe {
+            width: 100%;
+            height: 60px;
+            border: none;
+        }
+
+        .placeholder-player-text {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .right-utility-controls {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 15px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+            color: rgba(255,255,255,0.05);
+        }
+
+        /* Navegação Mobile Inferior (Estilo App Nativo) */
+        .mobile-nav-bar {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: rgba(10, 10, 12, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-color);
+            z-index: 110;
+            grid-template-columns: repeat(3, 1fr);
+            align-items: center;
+            justify-items: center;
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .mobile-nav-item i {
+            font-size: 1.25rem;
+        }
+
+        .mobile-nav-item.active {
+            color: var(--accent);
+        }
+
+        /* Responsividade Extrema (Telemóveis e Tablets) */
+        @media (max-width: 900px) {
+            .sidebar {
+                display: none;
+            }
+            .mobile-nav-bar {
+                display: grid;
+            }
+            .master-player-bar {
+                bottom: 70px; /* Sobe para dar espaço à barra mobile */
+                grid-template-columns: 1fr;
+                height: auto;
+                padding: 15px;
+                gap: 10px;
+            }
+            .right-utility-controls, .current-track-info {
+                display: none; /* Esconde metadados secundários para otimizar espaço no telemóvel */
+            }
+            .master-controls-center {
+                max-width: 100%;
+            }
+            .stats-banner {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .content-container {
+                padding: 20px 15px;
+            }
+            .greeting h1 {
+                font-size: 1.8rem;
+            }
+            .main-wrapper {
+                padding-bottom: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Ambient Background Aurora Engine -->
+    <div class="ambient-glow" id="ambientGlow"></div>
+
+    <!-- SIDEBAR (Layout Desktop) -->
+    <div class="sidebar">
+        <div class="logo">
+            <i class="fa-solid fa-bolt-lightning"></i>
+            <span>StreamVault Pro</span>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item active" onclick="switchTab('explorar', this)">
+                <i class="fa-solid fa-compass"></i> Explorar
+            </li>
+            <li class="nav-item" onclick="switchTab('favoritos', this)">
+                <i class="fa-solid fa-heart"></i> Favoritos
+            </li>
+            <li class="nav-item" onclick="switchTab('definicoes', this)">
+                <i class="fa-solid fa-sliders"></i> Estúdio VIP
+            </li>
+        </ul>
+    </div>
+
+    <!-- MAIN INTERFACE CONTAINER -->
+    <div class="main-wrapper">
+        <div class="content-container">
+            
+            <!-- HEADER DINÂMICO -->
+            <div class="app-header">
+                <div class="greeting">
+                    <h1 id="greetingText">Boa noite</h1>
+                    <p id="subGreeting">O teu cofre de faixas personalizadas premium.</p>
+                </div>
+            </div>
+
+            <!-- TAB: EXPLORAR (HOME) -->
+            <div id="tab-explorar" class="tab-content">
+                <!-- Mini Stats Dash -->
+                <div class="stats-banner">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-music"></i></div>
+                        <div class="stat-info">
+                            <h4 id="stat-total">0</h4>
+                            <p>Tracks Guardadas</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-heart"></i></div>
+                        <div class="stat-info">
+                            <h4 id="stat-favs">0</h4>
+                            <p>Favoritas</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-infinity"></i></div>
+                        <div class="stat-info">
+                            <h4>Vercel Ready</h4>
+                            <p>Status da Cloud</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Caixa de Busca Premium -->
+                <div class="search-vault-box">
+                    <i class="fa-solid fa-link"></i>
+                    <input id="trackLink" type="text" placeholder="Cola aqui um link do SoundCloud (Ex: tracks, instrumentais, remixes)...">
+                    <button onclick="addTrack()">Adicionar à Cloud</button>
+                </div>
+
+                <div class="section-title">
+                    <i class="fa-solid fa-fire"></i> A Tua Coleção Global
+                </div>
+                
+                <div class="tracks-grid" id="globalGrid">
+                    <!-- Gerado dinamicamente -->
+                </div>
+            </div>
+
+            <!-- TAB: FAVORITOS -->
+            <div id="tab-favoritos" class="tab-content" style="display: none;">
+                <div class="section-title">
+                    <i class="fa-solid fa-heart" style="color: var(--accent);"></i> As Tuas Faixas Favoritas
+                </div>
+                <div class="tracks-grid" id="favoritesGrid">
+                    <!-- Gerado dinamicamente -->
+                </div>
+            </div>
+
+            <!-- TAB: DEFINIÇÕES VIP -->
+            <div id="tab-definicoes" class="tab-content" style="display: none;">
+                <div class="section-title">
+                    <i class="fa-solid fa-crown" style="color: #ffd700;"></i> Definições de Customização VIP
+                </div>
+                
+                <div class="settings-panel">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3>Motor Estético (Skin Global)</h3>
+                            <p>Muda instantaneamente a palete de cores inspirada em apps líderes mundiais.</p>
+                        </div>
+                        <div class="theme-selector-grid">
+                            <div class="theme-pill active" id="pill-default" onclick="setTheme('default')">Apple Style</div>
+                            <div class="theme-pill" id="pill-spotify" onclick="setTheme('spotify')">Spotify Dark</div>
+                            <div class="theme-pill" id="pill-cyberpunk" onclick="setTheme('cyberpunk')">Neon Cyan</div>
+                            <div class="theme-pill" id="pill-stealth" onclick="setTheme('stealth')">Stealth Carbon</div>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3>Cópia de Segurança Local (Backup)</h3>
+                            <p>Descarrega todas as tuas faixas guardadas num ficheiro para nunca perderes nada.</p>
+                        </div>
+                        <button class="btn-backup" onclick="exportLibrary()">
+                            <i class="fa-solid fa-download"></i> Exportar JSON
+                        </button>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3>Restaurar Cofre</h3>
+                            <p>Carrega uma lista completa de músicas a partir do teu ficheiro de backup.</p>
+                        </div>
+                        <input type="file" id="importFile" style="display: none;" onchange="importLibrary(event)">
+                        <button class="btn-backup" onclick="document.getElementById('importFile').click()">
+                            <i class="fa-solid fa-upload"></i> Importar JSON
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MASTER DECK PLAYER FIXO (Apple Music / Spotify Style) -->
+    <div class="master-player-bar">
+        <div class="current-track-info">
+            <div class="mini-cover" id="miniPlayerCover">
+                <i class="fa-solid fa-compact-disc fa-spin" style="display: none; color: var(--accent);"></i>
+                <i class="fa-solid fa-music" id="defaultMiniIcon"></i>
+            </div>
+            <div class="track-info-text">
+                <h3 id="currentPlayingTitle">Nenhuma faixa activa</h3>
+                <p id="currentPlayingSubtitle">Seleciona uma track abaixo</p>
+            </div>
+        </div>
+
+        <div class="master-controls-center">
+            <div class="iframe-stage" id="masterIframeStage">
+                <div class="placeholder-player-text">
+                    <i class="fa-solid fa-circle-play"></i> Pronto para reproduzir em alta fidelidade
+                </div>
+            </div>
+        </div>
+
+        <div class="right-utility-controls">
+            <i class="fa-solid fa-volume-high"></i>
+            <i class="fa-solid fa-sliders"></i>
+            <i class="fa-solid fa-expand"></i>
+        </div>
+    </div>
+
+    <!-- BARRA DE NAVEGAÇÃO MOBILE INFERIOR -->
+    <div class="mobile-nav-bar">
+        <div class="mobile-nav-item active" id="mNav-explorar" onclick="switchTab('explorar', this, true)">
+            <i class="fa-solid fa-compass"></i>
+            <span>Explorar</span>
+        </div>
+        <div class="mobile-nav-item" id="mNav-favoritos" onclick="switchTab('favoritos', this, true)">
+            <i class="fa-solid fa-heart"></i>
+            <span>Favoritos</span>
+        </div>
+        <div class="mobile-nav-item" id="mNav-definicoes" onclick="switchTab('definicoes', this, true)">
+            <i class="fa-solid fa-sliders"></i>
+            <span>VIP</span>
+        </div>
+    </div>
+
+    <script>
+        // Engine de Dados do Utilizador
+        let tracks = JSON.parse(localStorage.getItem("vault_tracks")) || [];
+        let favorites = JSON.parse(localStorage.getItem("vault_favs")) || [];
+        let activeTheme = localStorage.getItem("vault_theme") || "default";
+
+        // Inicializar configurações ao arrancar o app
+        document.addEventListener("DOMContentLoaded", () => {
+            setTheme(activeTheme);
+            updateGreeting();
+            renderApp();
+        });
+
+        // Saudação inteligente adaptada ao relógio do telemóvel/computador
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            const greetEl = document.getElementById("greetingText");
+            if (hour >= 5 && hour < 12) greetEl.innerText = "Bom dia ☀️";
+            else if (hour >= 12 && hour < 18) greetEl.innerText = "Boa tarde 🎧";
+            else greetEl.innerText = "Boa noite ⚡";
+        }
+
+        // Alternar Abas (Tabs) de forma limpa e fluida
+        function switchTab(tabName, element, isMobile = false) {
+            // Esconder todas as secções
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            // Mostrar a secção ativa
+            document.getElementById(`tab-${tabName}`).style.display = 'block';
+
+            // Remover classes ativas de ambos os menus (desktop e mobile)
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+
+            if(isMobile) {
+                element.classList.add('active');
+                // Sincronizar o correspondente em desktop
+                const desktopItem = document.querySelector(`.sidebar .nav-item:nth-child(${Array.from(element.parentNode.children).indexOf(element) + 1})`);
+                if(desktopItem) desktopItem.classList.add('active');
+            } else {
+                element.classList.add('active');
+                // Sincronizar o correspondente em mobile
+                const mobileTabs = ['explorar', 'favoritos', 'definicoes'];
+                const mIdx = mobileTabs.indexOf(tabName);
+                if(mIdx !== -1) {
+                    document.querySelectorAll('.mobile-nav-bar .mobile-nav-item')[mIdx].classList.add('active');
+                }
+            }
+        }
+
+        // Engine Premium de Temas
+        function setTheme(theme) {
+            document.body.className = '';
+            if(theme !== 'default') {
+                document.body.classList.add(`theme-${theme}`);
+            }
+            localStorage.setItem("vault_theme", theme);
+            
+            // Atualizar UI dos botões de seleção de tema (Pills)
+            document.querySelectorAll('.theme-pill').forEach(el => el.classList.remove('active'));
+            const targetPill = document.getElementById(`pill-${theme}`);
+            if(targetPill) targetPill.classList.add('active');
+        }
+
+        // Adicionar Faixa com Validação Avançada
+        function addTrack() {
+            const linkInput = document.getElementById("trackLink");
+            let url = linkInput.value.trim();
+
+            if (!url) return;
+
+            // Extração super básica de um título limpo a partir do link para ficar profissional
+            let cleanTitle = "Faixa Importada";
+            try {
+                if (url.includes("soundcloud.com")) {
+                    const parts = url.split('/');
+                    if (parts.length > 3) {
+                        cleanTitle = parts[parts.length - 1].replace(/-/g, ' ');
+                        // Colocar primeira letra em maiúscula
+                        cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+                    }
+                }
+            } catch(e) { console.log(e); }
+
+            const newTrack = {
+                id: 'tr_' + Date.now(),
+                title: cleanTitle,
+                url: url,
+                timestamp: new Date().toLocaleDateString('pt-PT')
+            };
+
+            tracks.unshift(newTrack);
+            linkInput.value = "";
+            saveState();
+            renderApp();
+        }
+
+        // Apagar Faixa com Confirmação e Animação
+        function deleteTrack(id, e) {
+            e.stopPropagation(); // Impede que clique no card ative o player
+            tracks = tracks.filter(t => t.id !== id);
+            favorites = favorites.filter(favId => favId !== id);
+            saveState();
+            renderApp();
+        }
+
+        // Sistema de Favoritos On-The-Fly
+        function toggleFavorite(id, e) {
+            e.stopPropagation();
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(favId => favId !== id);
+            } else {
+                favorites.push(id);
+            }
+            saveState();
+            renderApp();
+        }
+
+        // Player Avançado Integrado (Envia a música para o Master Deck)
+        function playTrack(url, title) {
+            const stage = document.getElementById("masterIframeStage");
+            const currentTitle = document.getElementById("currentPlayingTitle");
+            const currentSubtitle = document.getElementById("currentPlayingSubtitle");
+            const cover = document.getElementById("miniPlayerCover");
+            const discIcon = cover.querySelector('.fa-compact-disc');
+            const musicIcon = document.getElementById("defaultMiniIcon");
+
+            // Configuração refinada do widget oficial do SoundCloud para máxima fidelidade visual
+            const embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff2d55&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&visual=false`;
+            
+            stage.innerHTML = `<iframe src="${embedUrl}" allow="autoplay"></iframe>`;
+            
+            // Atualizar Metadados do Deck Fixo
+            currentTitle.innerText = title;
+            currentSubtitle.innerText = "A reproduzir da Cloud";
+            
+            // Ativar Animações de Capa estilo Apple Music
+            cover.classList.add('mini-cover-anim');
+            discIcon.style.display = 'block';
+            musicIcon.style.display = 'none';
+        }
+
+        function saveState() {
+            localStorage.setItem("vault_tracks", JSON.stringify(tracks));
+            localStorage.setItem("vault_favs", JSON.stringify(favorites));
+        }
+
+        // Renderizador Global de UI (Garante consistência absoluta de dados)
+        function renderApp() {
+            // Atualizar Contadores do Painel Superior
+            document.getElementById("stat-total").innerText = tracks.length;
+            document.getElementById("stat-favs").innerText = favorites.length;
+
+            const globalGrid = document.getElementById("globalGrid");
+            const favoritesGrid = document.getElementById("favoritesGrid");
+
+            // 1. Renderizar Grelha Global
+            if (tracks.length === 0) {
+                globalGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa-solid fa-music"></i>
+                        <p>O teu cofre está limpo. Adiciona links do SoundCloud para criar a tua central de streaming.</p>
+                    </div>`;
+            } else {
+                globalGrid.innerHTML = tracks.map(t => generateCardHtml(t)).join('');
+            }
+
+            // 2. Renderizar Grelha de Favoritos
+            const favTracks = tracks.filter(t => favorites.includes(t.id));
+            if (favTracks.length === 0) {
+                favoritesGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa-solid fa-heart"></i>
+                        <p>Ainda não adicionaste músicas aos teus favoritos.</p>
+                    </div>`;
+            } else {
+                favoritesGrid.innerHTML = favTracks.map(t => generateCardHtml(t)).join('');
+            }
+        }
+
+        // Construtor Estrutural de Cards com Micro-Interações
+        function generateCardHtml(track) {
+            const isFav = favorites.includes(track.id);
+            return `
+                <div class="track-card" onclick="playTrack('${track.url}', '${track.title}')">
+                    <div class="track-cover-wrapper">
+                        <i class="fa-solid fa-sliders"></i>
+                        <div class="play-overlay">
+                            <div class="play-btn-circle"><i class="fa-solid fa-play"></i></div>
+                        </div>
+                    </div>
+                    <div class="track-meta">
+                        <div class="track-info-text">
+                            <h3>${track.title}</h3>
+                            <p><i class="fa-solid fa-calendar-days" style="font-size: 0.75rem;"></i> ${track.timestamp}</p>
+                        </div>
+                        <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite('${track.id}', event)">
+                            <i class="fa-${isFav ? 'solid' : 'regular'} fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="track-actions">
+                        <button class="action-btn btn-listen">OUVIR AGORA</button>
+                        <button class="action-btn btn-trash" onclick="deleteTrack('${track.id}', event)">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Exportar Cofre para ficheiro físico (JSON)
+        function exportLibrary() {
+            if(tracks.length === 0) {
+                alert("Não tens faixas para exportar!");
+                return;
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({tracks, favorites}));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "streamvault_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // Importar Cofre a partir de ficheiro físico (JSON)
+        function importLibrary(event) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if(importedData.tracks) {
+                        tracks = importedData.tracks;
+                        favorites = importedData.favorites || [];
+                        saveState();
+                        renderApp();
+                        alert("Cofre restaurado com sucesso! 🎉");
+                    }
+                } catch(err) {
+                    alert("Ficheiro inválido ou corrompido.");
+                }
+            };
+            reader.readAsText(event.target.files[0]);
+        }
+    </script>
+</body>
+</html>
